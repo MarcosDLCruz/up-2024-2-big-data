@@ -10,9 +10,9 @@
             <strong>{{ question.question }}</strong>
             <br>
             {% if question.response.answer_text %}
-                Answer text: {{ question.response.answer_text }}
+                <em>{{ question.response.answer_text }}</em>
             {% else %}
-                Answer id: {{ question.response.answer_id }}
+                {{ question.response.answer }} ({{ question.response.answer_id }})
             {% endif %}
         </li>
         {% endfor %}

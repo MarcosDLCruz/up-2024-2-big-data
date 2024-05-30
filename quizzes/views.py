@@ -11,10 +11,11 @@ def index(request):
 
     for quiz in quizz_list:
         cur.execute('''
-        SELECT qr.student_id
+        SELECT qr.student_id, s.full_name
         FROM quizzes q
         JOIN quiz_questions qq ON qq.quiz_id = q.id
         JOIN quiz_responses qr ON qr.question_id = qq.id
+        LEFT JOIN students s ON s.id=qr.student_id
         WHERE q.id = %s
         GROUP BY qr.student_id;
         ''', [quiz['id']])
@@ -32,14 +33,59 @@ def detail(request, quiz_id, student_id):
 
     for question in questions:
         cur.execute('''
-        SELECT r.answer_text, r.answer_id
-        FROM quiz_responses r WHERE r.question_id = %s AND r.student_id = %s;
+        SELECT r.answer_text, r.answer_id, a.answer
+        FROM quiz_responses r
+        LEFT JOIN quiz_answers a ON a.id=r.answer_id
+        WHERE r.question_id = %s AND r.student_id = %s;
         ''', [question['id'], student_id])
         response = dict_fetchone(cur)
         question['response'] = response
 
     context = {'quiz_id': quiz_id, 'student_id': student_id, 'questions': questions}
     return render(request, "quizzes/detail.html", context)
+
+
+def create(request, quiz_id):
+    cur = connection.cursor()
+    cur.execute('SELECT id, question FROM quiz_questions WHERE quiz_id = %s;', [quiz_id])
+    questions = dict_fetchall(cur)
+    
+    for question in questions:
+        cur.execute('SELECT id, answer FROM quiz_answers WHERE question_id = %s', [question['id']])
+        answers = dict_fetchall(cur)
+        if len(answers) > 0:
+            question['answers'] = answers
+
+    cur.execute('SELECT id, full_name FROM students')
+    students = dict_fetchall(cur)
+
+    context = {'quiz_id': quiz_id, 'questions': questions, 'students': students}
+    return render(request, "quizzes/create.html", context)
+
+
+def store(request, quiz_id):
+    student_id = request.POST.get('student_id')
+
+    cur = connection.cursor()
+    cur.execute('SELECT id, question FROM quiz_questions WHERE quiz_id = %s;', [quiz_id])
+    questions = dict_fetchall(cur)
+    
+    for question in questions:
+        response = request.POST.get(question['id'])
+        cur.execute('SELECT count(*) FROM quiz_answers WHERE question_id = %s', [question['id']])
+        cnt = int(cur.fetchone()[0])
+        # if the question has answer options, then the response is not free text
+        answer_text = response if cnt == 0 else None
+        answer_id = response if cnt > 0 else None
+        cur.execute('''
+        INSERT INTO quiz_responses (question_id, student_id, answer_id, answer_text)
+        VALUES (%s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE answer_text = VALUES(answer_text), answer_id = VALUES(answer_id);
+        ''', [question['id'], student_id, answer_id, answer_text])
+
+    connection.commit()
+    
+    return HttpResponseRedirect(reverse("quizzes:index"))
 
 # --- helpers
 
