@@ -82,11 +82,11 @@ DATABASES = {
         #'NAME': BASE_DIR / 'db.sqlite3',
         # see: https://dev.mysql.com/doc/connector-python/en/connector-python-django-backend.html
         'ENGINE': 'mysql.connector.django',
-        'NAME': 'up_2024_2_big_data',
+        'NAME': 'up_0234847',
         'HOST': '35.193.209.4',
         'PORT': 3306,
-        'USER': 'santi',
-        'PASSWORD': 'Est.1989',
+        'USER': '0234847',
+        'PASSWORD': '0234847',
         'OPTIONS': {
         }
     }
